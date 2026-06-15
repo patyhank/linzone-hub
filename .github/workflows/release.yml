@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install tooling
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base-devel \
+            dkms \
+            git \
+            go \
+            gtk4 \
+            hidapi \
+            libusb \
+            npm \
+            sudo \
+            systemd-libs \
+            tar \
+            upower \
+            webkitgtk-6.0
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkgver="$(grep -E '^pkgver=' packaging/arch/PKGBUILD | cut -d= -f2)"
+          tag="v${pkgver}-${GITHUB_RUN_NUMBER}"
+          echo "pkgver=${pkgver}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "name=LINZONE Hub ${pkgver} build ${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          workspace="$GITHUB_WORKSPACE"
+          useradd -m builder
+          chown -R builder:builder "$workspace"
+          sudo -u builder bash -lc "cd '$workspace/packaging/arch' && makepkg -f --noconfirm"
+          sudo -u builder bash -lc "cd '$workspace/packaging/arch' && makepkg -f --noconfirm -p PKGBUILD.dkms"
+
+          mkdir -p "$workspace/dist"
+          cp "$workspace"/packaging/arch/*.pkg.tar.zst "$workspace/dist/"
+          tar -C "$workspace" -czf "$workspace/dist/linzone-hub-linux-x86_64.tar.gz" \
+            linzone-hub \
+            packaging/linux/dev.patyhank.linzonehub.desktop \
+            frontend/public/inzone-assets/resources/app_notify_icon.png \
+            LICENSE \
+            README.md \
+            README_TW.md
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: linzone-hub-release-${{ steps.meta.outputs.tag }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: dist/*
