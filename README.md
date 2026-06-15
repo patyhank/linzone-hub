@@ -28,6 +28,14 @@ Currently tested hardware:
 
 The codebase also contains mappings for additional INZONE headset, mouse, and keyboard PIDs, but untested devices may need protocol tuning.
 
+The DKMS battery module attempts broader experimental coverage for known INZONE runtime PIDs:
+
+- HID HCI headsets: H9 / H7 family, H5, H10, E9, and H6 Air.
+- INZONE Buds / GTW, including separate left / right / case battery supplies.
+- Protocol A keyboard / mouse battery level reporting for INZONE Mouse-A and KBD-H75.
+
+Bootloader PIDs are intentionally excluded. Some H9 / H7 modes expose their main control path through USB VCOM / CDC ACM, so the kernel module only covers battery data available through the HID path.
+
 ## Battery / UPower Integration
 
 Desktop battery pages usually read device batteries from UPower. UPower does not offer a normal userspace D-Bus API for arbitrary apps to inject `/org/freedesktop/UPower/devices/*` batteries.

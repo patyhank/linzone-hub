@@ -19,11 +19,24 @@ UPower should then expose matching devices under:
 
 ## Current Scope
 
-- INZONE H9 PS5 / dongle PIDs: `0x0E4C`, `0x0E61`
+- HID HCI headsets:
+  - INZONE H9 / H7 family: `0x0E53`, `0x0E4C`, `0x0E61`, `0x0DFD`, `0x0E47`
+  - INZONE H5: `0x0EBF`
+  - INZONE H10: `0x0FA8`
+  - INZONE E9: `0x0F80`, `0x0F81`
+  - INZONE H6 Air: `0x0FC0`, `0x0FC1`
 - INZONE Buds / GTW PIDs: `0x0EC2`, `0x0EC3`
 - Buds exports separate left / right / case batteries
+- Protocol A keyboard / mouse battery query:
+  - INZONE Mouse-A: `0x0FAE`, `0x0FAF`
+  - INZONE KBD-H75: `0x0FB0`
 
-The original H9 wired PID `0x0E53` is not enabled here because the technical notes identify it as a legacy COM/serial path, not this HID battery path.
+Bootloader PIDs are intentionally excluded because they do not expose useful
+runtime battery state.
+
+Some H9 / H7 modes expose their main userspace control path through USB VCOM /
+CDC ACM. This module only covers HID battery reporting paths that can be
+handled by the Linux HID subsystem.
 
 ## Install
 

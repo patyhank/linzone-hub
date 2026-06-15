@@ -28,6 +28,14 @@ LINZONE Hub 是給 Sony INZONE 裝置使用的實驗性 Linux 控制工具。
 
 程式內也有其他 INZONE 耳機、滑鼠、鍵盤 PID 對應，但未測裝置可能還需要調整 protocol。
 
+DKMS 電量模組目前會對已知的 INZONE runtime PID 嘗試較完整的實驗性支援：
+
+- HID HCI 耳機：H9 / H7 系列、H5、H10、E9、H6 Air。
+- INZONE Buds / GTW，包含左耳、右耳、充電盒三個獨立電量。
+- Protocol A 鍵盤 / 滑鼠電量回報：INZONE Mouse-A 與 KBD-H75。
+
+Bootloader PID 會刻意排除。部分 H9 / H7 模式的主要控制通道是 USB VCOM / CDC ACM，所以 kernel module 只負責 HID path 能取得的電量資料。
+
 ## 電量與 UPower 整合
 
 Linux 桌面的電量頁面通常讀 UPower。UPower 沒有提供一般 userspace app 可以任意注入 `/org/freedesktop/UPower/devices/*` 電池的 D-Bus API。
