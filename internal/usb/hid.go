@@ -62,6 +62,35 @@ func IsBuds(pid uint16) bool {
 	return pid == 0x0EC2 || pid == 0x0EC3
 }
 
+func IsMouse(pid uint16) bool {
+	switch pid {
+	case 0x0FAE, 0x0FAF, 0x0FB1, 0x0FB2:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsKeyboard(pid uint16) bool {
+	return pid == 0x0FB0 || pid == 0x0FB3
+}
+
+func IsHeadset(pid uint16) bool {
+	if IsMouse(pid) || IsKeyboard(pid) {
+		return false
+	}
+	return IsSupported(SonyVID, pid)
+}
+
+func IsLegacySerialHeadset(pid uint16) bool {
+	switch pid {
+	case 0x0E53, 0x0E4C, 0x0E61:
+		return true
+	default:
+		return false
+	}
+}
+
 // GetModelName returns the human-readable model name
 func GetModelName(pid uint16) string {
 	if name, ok := SupportedPIDs[pid]; ok {
@@ -230,6 +259,31 @@ func FindBudsControlInterface(base DeviceInfo) (DeviceInfo, error) {
 		return DeviceInfo{}, fmt.Errorf("no Buds Sony control HID collection found for %s", base.Model)
 	}
 	return match, nil
+}
+
+func FindHeadsetControlInterfaces(base DeviceInfo) ([]DeviceInfo, error) {
+	if !IsHeadset(base.ProductID) || IsBuds(base.ProductID) {
+		return nil, fmt.Errorf("%s is not a standard headset device", base.Model)
+	}
+
+	var matches []DeviceInfo
+	err := hid.Enumerate(SonyVID, base.ProductID, func(info *hid.DeviceInfo) error {
+		if !samePhysicalDevice(base, info) || !isLikelySonyControlInterface(info) {
+			return nil
+		}
+		matches = append(matches, DeviceInfo{DeviceInfo: *info, Model: GetModelName(info.ProductID)})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) == 0 && base.Path != "" {
+		matches = append(matches, base)
+	}
+	sort.Slice(matches, func(i, j int) bool {
+		return devicePreferenceScore(&matches[i].DeviceInfo) > devicePreferenceScore(&matches[j].DeviceInfo)
+	})
+	return matches, nil
 }
 
 // FindBudsRaceInterface locates the UsagePage 0xFF13 Airoha Race collection for the selected Buds device.

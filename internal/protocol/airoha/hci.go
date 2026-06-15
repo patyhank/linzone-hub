@@ -289,12 +289,24 @@ func decodeBudsVolumeInfo(param []byte) (*BudsVolumeInfo, error) {
 	if len(param) < 3 {
 		return nil, fmt.Errorf("volume payload too short")
 	}
+	if param[2] > 100 && param[1] <= 100 {
+		return &BudsVolumeInfo{Mute: 0, Raw: param[1], Percent: param[1]}, nil
+	}
+	if param[2] > 100 {
+		return nil, fmt.Errorf("volume percent out of range: %d", param[2])
+	}
 	return &BudsVolumeInfo{Mute: param[0], Raw: param[1], Percent: param[2]}, nil
 }
 
 func decodeBudsAmbientInfo(param []byte) (*BudsAmbientInfo, error) {
 	if len(param) < 4 {
 		return nil, fmt.Errorf("ambient payload too short")
+	}
+	if param[2] > 100 && param[1] <= 100 {
+		return &BudsAmbientInfo{NCMode: param[0], AmbientRaw: param[2], AmbientPercent: param[1], VoiceFocus: param[3]}, nil
+	}
+	if param[2] > 100 {
+		return nil, fmt.Errorf("ambient percent out of range: %d", param[2])
 	}
 	return &BudsAmbientInfo{NCMode: param[0], AmbientRaw: param[1], AmbientPercent: param[2], VoiceFocus: param[3]}, nil
 }

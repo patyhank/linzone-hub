@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=LINZONE Hub
+Comment=Linux controller for Sony INZONE devices
+Exec=linzone-hub
+Icon=linzone-hub
+Terminal=false
+Categories=Settings;HardwareSettings;
+StartupWMClass=LINZONE Hub

@@ -1,0 +1,25 @@
+# Maintainer: LINZONE Hub contributors
+pkgname=hid-inzone-battery-dkms
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Experimental Sony INZONE HID battery power_supply DKMS driver"
+arch=('any')
+url="https://github.com/patyhank/linzone-hub"
+license=('GPL-2.0-only')
+depends=('dkms')
+source=()
+sha256sums=()
+
+package() {
+  cd "${startdir}/../.."
+  install -Dm644 kernel/hid-inzone-battery-dkms/hid_inzone_battery.c \
+    "${pkgdir}/usr/src/hid-inzone-battery-${pkgver}/hid_inzone_battery.c"
+  install -Dm644 kernel/hid-inzone-battery-dkms/Makefile \
+    "${pkgdir}/usr/src/hid-inzone-battery-${pkgver}/Makefile"
+  install -Dm644 kernel/hid-inzone-battery-dkms/dkms.conf \
+    "${pkgdir}/usr/src/hid-inzone-battery-${pkgver}/dkms.conf"
+  install -Dm644 kernel/hid-inzone-battery-dkms/99-inzone-battery.rules \
+    "${pkgdir}/usr/lib/udev/rules.d/99-inzone-battery.rules"
+  install -Dm644 kernel/hid-inzone-battery-dkms/README.md \
+    "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+}

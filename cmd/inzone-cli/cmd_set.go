@@ -187,6 +187,9 @@ func init() {
 			}
 			if usb.IsBuds(d.ProductID) {
 				_ = dev.Close()
+				if pct > 30 {
+					return fmt.Errorf("INZONE Buds headphone volume must be 0-30")
+				}
 				buds, info, cleanup, err := openBudsControl(idx)
 				if err != nil {
 					return err
@@ -221,6 +224,19 @@ func init() {
 			if err != nil {
 				return err
 			}
+			if usb.IsBuds(d.ProductID) {
+				_ = dev.Close()
+				buds, info, cleanup, err := openBudsControl(idx)
+				if err != nil {
+					return err
+				}
+				defer cleanup()
+				if err := buds.SetSidetone(pct); err != nil {
+					return fmt.Errorf("set Buds sidetone: %w", err)
+				}
+				fmt.Printf("Set sidetone ~%d%% on %s\n", pct, info.Model)
+				return nil
+			}
 			defer dev.Close()
 
 			if err := protocol.SetSidetone(dev, pct, pct); err != nil {
@@ -244,6 +260,19 @@ func init() {
 			dev, d, err := openDeviceByIndex(idx)
 			if err != nil {
 				return err
+			}
+			if usb.IsBuds(d.ProductID) {
+				_ = dev.Close()
+				buds, info, cleanup, err := openBudsControl(idx)
+				if err != nil {
+					return err
+				}
+				defer cleanup()
+				if err := buds.SetGameChatMix(bal); err != nil {
+					return fmt.Errorf("set Buds mix: %w", err)
+				}
+				fmt.Printf("Set game/chat mix to %d on %s\n", bal, info.Model)
+				return nil
 			}
 			defer dev.Close()
 

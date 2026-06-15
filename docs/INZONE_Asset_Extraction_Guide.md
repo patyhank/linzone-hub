@@ -1,15 +1,22 @@
 # INZONE Asset Extraction Guide
 
-這份文件說明怎麼從 `INZONEHub.dll` 把 Linux GUI 會用到的素材抽出來，並整理型號和圖示的對應方式。
+這份文件說明怎麼從官方 `INZONEHub_Setup_1.0.19.0.exe` 自動拆出 setup 內的 `INZONEHub.dll`，再把 Linux GUI 會用到的素材抽出來，並整理型號和圖示的對應方式。
+
+整個流程只能使用 Linux 原生工具，不使用也不需要 `wine`。
 
 ## 檔案
 
 - `extract_inzone_assets.sh`
-- `INZONEHub.dll`
+- `extract_installshield_payload.go`
+- `INZONEHub_Setup_1.0.19.0.exe`
 
 ## 需求
 
-需要 `ilspycmd`。
+需要 `ilspycmd`、`go`、`7z`。
+
+對 `INZONEHub_Setup_1.0.19.0.exe`，腳本會用 Go 找出 Sony 包裝器裡的 nested PE，再取出 MSI/OLE resource，接著用 Linux 原生 `7z` 解出 `Data1.cab` stream，最後從 CAB 取出 setup 內的 `inzonehub.dll` 和 `app_notify_icon.png`。
+
+不支援 `wine`，也不應在 PKGBUILD 或 CI 裡依賴 `wine`。
 
 如果你已經用過前面的環境，通常只要：
 
@@ -23,20 +30,38 @@ export PATH="$PATH:/home/patyhank/.dotnet/tools"
 ilspycmd --help
 ```
 
+installer/archive 輸入另需：
+
+```bash
+go version
+7z i
+```
+
+Go helper 只解析/切出 PE resource，`7z` 只處理 MSI/OLE 和 CAB stream；不會執行 Windows 安裝器。
+
 ## 使用方式
 
-在 `INZONEHub.dll` 所在目錄執行：
+主要用法是直接指定官方 setup：
 
 ```bash
 chmod +x ./extract_inzone_assets.sh
-./extract_inzone_assets.sh
+./extract_inzone_assets.sh ./INZONEHub_Setup_1.0.19.0.exe ./inzone-assets
 ```
 
-自訂 DLL 路徑和輸出目錄：
+也可以指定其他輸出目錄：
 
 ```bash
+./extract_inzone_assets.sh ./INZONEHub_Setup_1.0.19.0.exe ./extracted-assets
+```
+
+已解包目錄或 DLL 路徑只保留給除錯用，不是打包流程的前置需求：
+
+```bash
+./extract_inzone_assets.sh ./unpacked-installer-dir ./extracted-assets
 ./extract_inzone_assets.sh ./INZONEHub.dll ./extracted-assets
 ```
+
+`INZONEHub_Setup_1.0.19.0.exe` 外層是 Sony Packaging Tool。實際素材來源在 nested PE 的 MSI/OLE resource `BINARY/#4000/#1041` 裡，裡面有 `Data1.cab` stream。`extract_installshield_payload.go` 會自動走這條路徑，不需要手動準備 `INZONEHub.dll`。
 
 ## 輸出內容
 
@@ -173,3 +198,4 @@ Icon = new BitmapImage(new Uri("/Resources/" + iconName + ".png", UriKind.Relati
 - 這些素材大多是嵌在 `INZONEHub.dll` 裡，不是安裝目錄上的普通檔案。
 - 除了主 icon 外，很多圖是狀態圖示，不是特定型號專屬大圖。
 - 官方程式對不同 headset 型號主要是共用 `menu_headset.png`，不是每個 headset 一張獨立主圖。
+- 後續 PKGBUILD / AppImage 打包流程應以官方 setup 和這個腳本產生 assets；不要要求預先放入 `INZONEHub.dll`，也不要加入 `wine` 步驟。

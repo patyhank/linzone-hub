@@ -1,0 +1,28 @@
+# Maintainer: LINZONE Hub contributors
+pkgname=linzone-hub
+pkgver=0.1.0
+pkgrel=3
+pkgdesc="Linux GUI controller for Sony INZONE devices"
+arch=('x86_64')
+url="https://github.com/patyhank/linzone-hub"
+license=('MIT')
+depends=('gtk3' 'webkit2gtk' 'libusb' 'hidapi' 'upower')
+makedepends=('go' 'npm')
+source=()
+sha256sums=()
+
+build() {
+  cd "${startdir}/../.."
+  npm --prefix frontend ci
+  npm --prefix frontend run build
+  go build -tags production -trimpath -buildvcs=false -ldflags="-w -s" -o "${pkgname}"
+}
+
+package() {
+  cd "${startdir}/../.."
+  install -Dm755 "${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
+  install -Dm644 packaging/linux/dev.patyhank.linzonehub.desktop \
+    "${pkgdir}/usr/share/applications/dev.patyhank.linzonehub.desktop"
+  install -Dm644 frontend/public/inzone-assets/resources/app_notify_icon.png \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/apps/${pkgname}.png"
+}

@@ -57,8 +57,8 @@ func (b *BudsDevice) GetHeadphoneVolume() (*BudsVolumeInfo, error) {
 	return decodeBudsVolumeInfo(n.Param)
 }
 
-func (b *BudsDevice) SetHeadphoneVolume(percent byte) error {
-	_, err := SendBudsHciSet(b.dev, b.allocTx(), protocol.EvtHeadphoneVolume, []byte{0, percent, percent}, budsHciReadTimeout)
+func (b *BudsDevice) SetHeadphoneVolume(level byte) error {
+	_, err := SendBudsHciSet(b.dev, b.allocTx(), protocol.EvtHeadphoneVolume, []byte{0, level, level}, budsHciReadTimeout)
 	return err
 }
 
@@ -72,6 +72,16 @@ func (b *BudsDevice) GetMicVolume() (*BudsVolumeInfo, error) {
 
 func (b *BudsDevice) SetMicVolume(percent byte) error {
 	_, err := SendBudsHciSet(b.dev, b.allocTx(), protocol.EvtMicVolume, []byte{0, percent, percent}, budsHciReadTimeout)
+	return err
+}
+
+func (b *BudsDevice) SetSidetone(percent byte) error {
+	_, err := SendBudsHciSet(b.dev, b.allocTx(), protocol.EvtSidetoneVolume, []byte{percent, percent}, budsHciReadTimeout)
+	return err
+}
+
+func (b *BudsDevice) SetGameChatMix(balance byte) error {
+	_, err := SendBudsHciSet(b.dev, b.allocTx(), protocol.EvtGameChatMix, []byte{balance}, budsHciReadTimeout)
 	return err
 }
 
@@ -89,6 +99,15 @@ func (b *BudsDevice) SetAmbient(ncMode, ambientPercent byte, voiceFocus bool) er
 		vf = 1
 	}
 	_, err := SendBudsHciSet(b.dev, b.allocTx(), protocol.EvtAmbSetting, []byte{ncMode, ambientPercent, ambientPercent, vf}, budsHciReadTimeout)
+	return err
+}
+
+func (b *BudsDevice) SetSurround(enabled bool) error {
+	value := byte(0)
+	if enabled {
+		value = 1
+	}
+	_, err := SendBudsHciSet(b.dev, b.allocTx(), protocol.EvtSurroundSetting, []byte{value}, budsHciReadTimeout)
 	return err
 }
 

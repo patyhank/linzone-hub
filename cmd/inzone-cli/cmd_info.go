@@ -82,6 +82,52 @@ var infoCmd = &cobra.Command{
 			return nil
 		}
 
+		if usb.IsLegacySerialHeadset(d.ProductID) {
+			fmt.Println("\nThis H9/H7 mode exposes headset control over USB VCOM / CDC ACM.")
+			ports, err := protocol.FindSonySerialPorts(d.VendorID, d.ProductID)
+			if err != nil {
+				return err
+			}
+			var lastErr error
+			for _, port := range ports {
+				detail := port.Path
+				if port.Interface != "" || port.Description != "" {
+					detail = fmt.Sprintf("%s (interface=%s %s)", port.Path, port.Interface, port.Description)
+				}
+				fmt.Printf("Opening serial port: %s\n", detail)
+				serial, err := protocol.OpenSerialHeadset(port.Path)
+				if err != nil {
+					lastErr = err
+					fmt.Printf("Serial open error: %v\n", err)
+					continue
+				}
+				model, batt, fw, err := protocol.GetSerialHeadsetInfo(serial)
+				_ = serial.Close()
+				if err != nil {
+					lastErr = err
+					fmt.Printf("Serial query error: %v\n", err)
+				}
+				if model != nil {
+					fmt.Printf("MODEL_INFO: ModelID=%d Color=%d Serial=%d Status=%d\n",
+						model.ModelID, model.Color, model.Serial, model.Status)
+				}
+				if batt != nil {
+					fmt.Printf("BATTERY: Status=%d Percent=%d%%\n", batt.Status, batt.Percent)
+				}
+				if len(fw) > 0 {
+					fmt.Printf("FW_VERSION raw: % X\n", fw)
+				}
+				if model != nil || batt != nil || len(fw) > 0 {
+					return nil
+				}
+				fmt.Println("No serial headset responses received on this port.")
+			}
+			fmt.Println("Serial did not respond; trying HID only as a diagnostic fallback.")
+			if lastErr != nil {
+				fmt.Printf("Last serial error: %v\n", lastErr)
+			}
+		}
+
 		dev, err := usb.Open(d)
 		if err != nil {
 			return fmt.Errorf("%w\n\nHint: On Linux you usually need a udev rule for normal-user access.\nRun `inzone udev` to print the recommended rule, or try with sudo for testing.", err)
@@ -113,9 +159,12 @@ var infoCmd = &cobra.Command{
 
 		defer dev.Close()
 		fmt.Println("Attempting headset query...")
-		model, batt, fw, err := protocol.GetHeadsetInfo(dev)
+		model, batt, fw, framing, err := protocol.GetHeadsetInfoAuto(dev)
 		if err != nil {
 			fmt.Printf("Headset query error: %v\n", err)
+		}
+		if model != nil || batt != nil || len(fw) > 0 {
+			fmt.Printf("HID framing: %s\n", framing)
 		}
 		if model != nil {
 			fmt.Printf("MODEL_INFO: ModelID=%d Color=%d Serial=%d Status=%d\n",
@@ -129,7 +178,9 @@ var infoCmd = &cobra.Command{
 		}
 		if model == nil && batt == nil {
 			fmt.Println("No standard headset responses received on this interface.")
-			fmt.Println("This may be a non-standard interface or need a device-specific handler.")
+			if !usb.IsLegacySerialHeadset(d.ProductID) {
+				fmt.Println("This may be a non-standard interface or need a device-specific handler.")
+			}
 		}
 		return nil
 	},

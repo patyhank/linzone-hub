@@ -1,0 +1,33 @@
+# Allow the active local user and the input group to access Sony INZONE HID
+# control interfaces. Final assignment prevents older local rules from
+# overriding this back to another group such as uucp.
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e53", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e4c", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e61", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0dfd", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e47", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ebf", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ec2", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ec3", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fa8", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0f80", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0f81", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fc0", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fc1", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fae", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0faf", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fb1", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fb2", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fb0", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0fb3", GROUP:="input", MODE:="0660", TAG+="uaccess"
+
+# Original INZONE H9/H7 0x0E53 control path is a USB serial/COM interface.
+# It is not a modem; prevent ModemManager probing from disturbing the CDC ACM
+# control channel on systems where ModemManager is enabled.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e53", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e4c", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", GROUP:="input", MODE:="0660", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e61", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", GROUP:="input", MODE:="0660", TAG+="uaccess"
+
+# Do not set UPOWER_BATTERY_TYPE for these power_supply nodes. KDE PowerDevil's
+# battery page only accepts UPower Type=Battery/Ups, and audio-device types are
+# intentionally filtered there.

@@ -1,3 +1,13 @@
 docs/INZONEHub.dll
+docs/INZONEHub_Setup_*.exe
 .idea
 /inzone
+/linzone-hub
+/frontend/dist/
+/frontend/node_modules/
+/bin/
+/build/
+/.task/
+/packaging/arch/*.pkg.tar.zst
+/packaging/arch/pkg/
+/packaging/arch/src/

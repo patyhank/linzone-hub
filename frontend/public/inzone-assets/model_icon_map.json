@@ -1,0 +1,113 @@
+{
+  "icon_files": {
+    "MENU_HEADSET": "raw/resources/menu_headset.png",
+    "MENU_BUDS": "raw/resources/menu_buds.png",
+    "MENU_MOUSE": "raw/resources/menu_mouse.png",
+    "MENU_KEYBORD": "raw/resources/menu_keybord.png",
+    "MENU_IE": "raw/resources/menu_ie.png"
+  },
+  "models": [
+    {
+      "model_id": "HDX_2959",
+      "internal_name": "HDX-2959",
+      "marketing_name": "INZONE H9",
+      "icon_name": "MENU_HEADSET",
+      "icon_file": "raw/resources/menu_headset.png",
+      "pids": ["0x0E53", "0x0E4C", "0x0E61"]
+    },
+    {
+      "model_id": "HDX_2960",
+      "internal_name": "HDX-2960",
+      "marketing_name": "INZONE H7",
+      "icon_name": "MENU_HEADSET",
+      "icon_file": "raw/resources/menu_headset.png",
+      "pids": []
+    },
+    {
+      "model_id": "HDX_2961",
+      "internal_name": "HDX-2961",
+      "marketing_name": "INZONE H3",
+      "icon_name": "MENU_HEADSET",
+      "icon_file": "raw/resources/menu_headset.png",
+      "pids": ["0x0DFD", "0x0E47"]
+    },
+    {
+      "model_id": "GH_M2",
+      "internal_name": "YY2976",
+      "marketing_name": "INZONE H5",
+      "icon_name": "MENU_HEADSET",
+      "icon_file": "raw/resources/menu_headset.png",
+      "pids": ["0x0EBF", "0x0EC0"]
+    },
+    {
+      "model_id": "GTW",
+      "internal_name": "YY2977",
+      "marketing_name": "INZONE Buds",
+      "icon_name": "MENU_BUDS",
+      "icon_file": "raw/resources/menu_buds.png",
+      "pids": ["0x0EC2", "0x0EC3"]
+    },
+    {
+      "model_id": "GH_H2",
+      "internal_name": "YY2987",
+      "marketing_name": "INZONE H9 II",
+      "icon_name": "MENU_HEADSET",
+      "icon_file": "raw/resources/menu_headset.png",
+      "pids": ["0x0FA8", "0x0FA9"]
+    },
+    {
+      "model_id": "GH_IE",
+      "internal_name": "YY2989",
+      "marketing_name": "INZONE E9",
+      "icon_name": "MENU_IE",
+      "icon_file": "raw/resources/menu_ie.png",
+      "pids": ["0x0F80", "0x0F81"]
+    },
+    {
+      "model_id": "GH_OB",
+      "internal_name": "YY2990",
+      "marketing_name": "INZONE H6 Air",
+      "icon_name": "MENU_HEADSET",
+      "icon_file": "raw/resources/menu_headset.png",
+      "pids": ["0x0FC0", "0x0FC1"]
+    },
+    {
+      "model_id": "HDX_2991",
+      "internal_name": "YY2991",
+      "marketing_name": "INZONE Mouse-A",
+      "icon_name": "MENU_MOUSE",
+      "icon_file": "raw/resources/menu_mouse.png",
+      "pids": ["0x0FAE", "0x0FAF", "0x0FB1", "0x0FB2"]
+    },
+    {
+      "model_id": "HDX_2992",
+      "internal_name": "YY2992",
+      "marketing_name": "INZONE KBD-H75",
+      "icon_name": "MENU_KEYBORD",
+      "icon_file": "raw/resources/menu_keybord.png",
+      "pids": ["0x0FB0", "0x0FB3"]
+    }
+  ],
+  "notable_assets": {
+    "buds": [
+      "raw/resources/bud_s.png",
+      "raw/resources/ear_l.png",
+      "raw/resources/ear_r.png",
+      "raw/resources/tw_case_mini_s.png"
+    ],
+    "mouse": [
+      "raw/resources/mouse_top.png",
+      "raw/resources/mouse_top_fnc.png",
+      "raw/resources/mouse_wired_s.png",
+      "raw/resources/mouse_dongle_s.png"
+    ],
+    "status": [
+      "raw/resources/battery_1_s.png",
+      "raw/resources/battery_2_s.png",
+      "raw/resources/battery_3_s.png",
+      "raw/resources/battery_4_s.png",
+      "raw/resources/bluetooth_connected_s.png",
+      "raw/resources/mic_mute_mini_s.png"
+    ]
+  }
+}

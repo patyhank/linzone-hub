@@ -1,0 +1,80 @@
+version: '3'
+
+vars:
+  APP_NAME: linzone-hub
+  BIN_DIR: bin
+  PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+
+tasks:
+  linux:build:
+    summary: Builds the Wails GUI application on Linux
+    cmds:
+      - task: build
+
+  linux:run:
+    summary: Runs the built GUI application on Linux
+    cmds:
+      - task: run
+
+  build:
+    summary: Builds the Wails GUI application
+    deps:
+      - build:frontend
+    cmds:
+      - mkdir -p {{.BIN_DIR}}
+      - go build -tags production -trimpath -buildvcs=false -ldflags="-w -s" -o {{.BIN_DIR}}/{{.APP_NAME}}
+
+  dev:
+    summary: Runs Wails in development mode
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  run:
+    summary: Runs the built GUI application
+    cmds:
+      - ./{{.BIN_DIR}}/{{.APP_NAME}}
+
+  build:frontend:
+    summary: Generates bindings and builds Svelte frontend
+    deps:
+      - generate:bindings
+      - install:frontend:deps
+    cmds:
+      - task: frontend:run
+        vars:
+          SCRIPT: '{{if eq .DEV "true"}}build:dev{{else}}build{{end}}'
+
+  install:frontend:deps:
+    dir: frontend
+    sources:
+      - package.json
+      - package-lock.json
+    generates:
+      - node_modules
+    cmds:
+      - '{{.PACKAGE_MANAGER}} install'
+
+  generate:bindings:
+    summary: Generates Wails JavaScript bindings
+    cmds:
+      - go mod tidy
+      - wails3 generate bindings -clean=true
+
+  frontend:run:
+    dir: frontend
+    cmds:
+      - '{{.PACKAGE_MANAGER}} run {{.SCRIPT}} -q'
+
+  frontend:dev:
+    dir: frontend
+    cmds:
+      - '{{.PACKAGE_MANAGER}} run dev -- --host 127.0.0.1 --port {{.VITE_PORT}}'
+
+  check:
+    summary: Runs frontend and Go checks
+    cmds:
+      - task: generate:bindings
+      - cmd: '{{.PACKAGE_MANAGER}} run check'
+        dir: frontend
+      - go test ./...

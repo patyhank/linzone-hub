@@ -4,15 +4,18 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./extract_inzone_assets.sh [DLL_PATH] [OUTPUT_DIR]
+  ./extract_inzone_assets.sh [INPUT_PATH] [OUTPUT_DIR]
 
 Examples:
   ./extract_inzone_assets.sh
   ./extract_inzone_assets.sh ./INZONEHub.dll ./extracted-assets
+  ./extract_inzone_assets.sh ./Sony-INZONE-Hub-Setup.exe ./extracted-assets
+  ./extract_inzone_assets.sh ./unpacked-installer-dir ./extracted-assets
 
 Notes:
   - Requires ilspycmd in PATH.
-  - Extracts embedded image-like resources from INZONEHub.dll.
+  - Accepts an INZONEHub.dll file, a setup/install archive, or an unpacked directory.
+  - Installer extraction uses 7z first, then a Go + native 7z Sony/MSI/CAB fallback.
   - Also writes a model/icon mapping JSON for Linux GUI use.
 EOF
 }
@@ -22,11 +25,14 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-DLL_PATH="${1:-./INZONEHub.dll}"
+INPUT_PATH="${1:-./INZONEHub.dll}"
 OUTPUT_DIR="${2:-./inzone-assets}"
 RESOURCE_PREFIX="INZONEHub.g.resources/"
 TMP_DIR="$(mktemp -d)"
 LIST_FILE="$TMP_DIR/resources.txt"
+WORK_ROOT="$TMP_DIR/work"
+INSTALL_ROOT=""
+DLL_PATH=""
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -39,13 +45,75 @@ if ! command -v ilspycmd >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ ! -f "$DLL_PATH" ]]; then
-  echo "error: DLL not found: $DLL_PATH" >&2
-  exit 1
-fi
-
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR/raw" "$OUTPUT_DIR/resources"
+
+resolve_install_root() {
+  local input_path="$1"
+  local normalized
+
+  normalized="$(realpath "$input_path")"
+
+  if [[ -d "$normalized" ]]; then
+    INSTALL_ROOT="$normalized"
+    return
+  fi
+
+  if [[ ! -f "$normalized" ]]; then
+    echo "error: input not found: $input_path" >&2
+    exit 1
+  fi
+
+  case "${normalized##*.}" in
+    dll|DLL)
+      INSTALL_ROOT="$(dirname "$normalized")"
+      DLL_PATH="$normalized"
+      return
+      ;;
+  esac
+
+  INSTALL_ROOT="$WORK_ROOT/unpacked"
+  mkdir -p "$INSTALL_ROOT"
+
+  echo "[*] Extracting installer/archive: $normalized"
+  if command -v 7z >/dev/null 2>&1; then
+    7z x -y -o"$INSTALL_ROOT" "$normalized" >/dev/null || true
+  fi
+
+  if [[ -n "$(find "$INSTALL_ROOT" -type f \( -name 'INZONEHub.dll' -o -name 'inzonehub.dll' \) -print -quit)" ]]; then
+    return
+  fi
+
+  if ! command -v go >/dev/null 2>&1; then
+    echo "error: installer input requires go when 7z cannot extract INZONEHub.dll" >&2
+    exit 1
+  fi
+
+  echo "[*] 7z did not expose INZONEHub.dll; trying native InstallShield/CAB extraction"
+  go run "$(dirname "$(realpath "$0")")/extract_installshield_payload.go" "$normalized" "$INSTALL_ROOT" INZONEHub.dll APP_NOTIFY_ICON.png
+}
+
+find_dll_path() {
+  local candidate
+
+  if [[ -n "$DLL_PATH" && -f "$DLL_PATH" ]]; then
+    return
+  fi
+
+  candidate="$(find "$INSTALL_ROOT" -type f \( -name 'INZONEHub.dll' -o -name 'inzonehub.dll' \) -print -quit)"
+  if [[ -z "$candidate" ]]; then
+    echo "error: INZONEHub.dll not found under: $INSTALL_ROOT" >&2
+    exit 1
+  fi
+
+  DLL_PATH="$candidate"
+}
+
+resolve_install_root "$INPUT_PATH"
+find_dll_path
+
+echo "[*] Using install root: $INSTALL_ROOT"
+echo "[*] Using DLL: $DLL_PATH"
 
 echo "[*] Listing embedded resources from $DLL_PATH"
 ilspycmd --list-resources "$DLL_PATH" > "$LIST_FILE"
@@ -67,7 +135,7 @@ extract_resource() {
   mkdir -p "$temp_out"
 
   ilspycmd --resource "$resource_name" "$DLL_PATH" -o "$temp_out" >/dev/null
-  extracted_file="$(find "$temp_out" -maxdepth 1 -type f | head -n 1)"
+  extracted_file="$(find "$temp_out" -maxdepth 1 -type f -print -quit)"
   if [[ -n "$extracted_file" && -f "$extracted_file" ]]; then
     extracted_name="$(basename "$extracted_file")"
     mv "$extracted_file" "$destination_dir/$extracted_name"
@@ -87,8 +155,12 @@ while IFS= read -r line; do
   esac
 done < "$LIST_FILE"
 
-if [[ -f "./resources/APP_NOTIFY_ICON.png" ]]; then
-  cp "./resources/APP_NOTIFY_ICON.png" "$OUTPUT_DIR/resources/app_notify_icon.png"
+if [[ -f "$INSTALL_ROOT/resources/APP_NOTIFY_ICON.png" ]]; then
+  cp "$INSTALL_ROOT/resources/APP_NOTIFY_ICON.png" "$OUTPUT_DIR/resources/app_notify_icon.png"
+elif [[ -f "$INSTALL_ROOT/app_notify_icon.png" ]]; then
+  cp "$INSTALL_ROOT/app_notify_icon.png" "$OUTPUT_DIR/resources/app_notify_icon.png"
+elif [[ -f "$INSTALL_ROOT/APP_NOTIFY_ICON.png" ]]; then
+  cp "$INSTALL_ROOT/APP_NOTIFY_ICON.png" "$OUTPUT_DIR/resources/app_notify_icon.png"
 fi
 
 cat > "$OUTPUT_DIR/model_icon_map.json" <<'EOF'
@@ -214,6 +286,10 @@ Directories:
   raw/resources/        Embedded resource files extracted from INZONEHub.dll
   resources/            Extra loose files copied from install directory when present
   model_icon_map.json   Model <-> icon/material mapping for Linux GUI use
+
+Source input:
+  The script accepts either an installer/archive, an unpacked directory, or INZONEHub.dll directly.
+  When given an installer/archive, it tries 7z first, then falls back to a native Go InstallShield/CAB extractor.
 
 Common files:
   raw/resources/menu_headset.png

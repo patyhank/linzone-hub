@@ -20,7 +20,14 @@ const (
 	CmdNOTIFY = 0x99
 
 	// Common command IDs (16-bit: index<<8 | cmd)
-	GETDeviceInformation = 0x00A0
+	GETDeviceInformation     = 0x00A0
+	GETCurrentBatteryInfo    = 0x04A0
+	GETWirelessMouseStatus   = 0x03A0
+	GETChargeStatus          = 0x09A0
+	MouseBatteryLevelLow     = 0
+	MouseBatteryLevelLowMid  = 1
+	MouseBatteryLevelHighMid = 2
+	MouseBatteryLevelHigh    = 3
 )
 
 // KBMHeader is the 4-byte protocol A header
@@ -95,7 +102,11 @@ func min(a, b int) int {
 
 // GetDeviceInformationKBM sends GET_DEVICE_INFORMATION (160) and returns the 18-byte raw info (mouse) or 15-byte (kbd).
 func GetDeviceInformationKBM(dev *hid.Device) ([]byte, error) {
-	req := BuildKBMGet(GETDeviceInformation)
+	return GetKBMCommand(dev, GETDeviceInformation)
+}
+
+func GetKBMCommand(dev *hid.Device, cmd uint16) ([]byte, error) {
+	req := BuildKBMGet(cmd)
 	if err := SendKBMReport(dev, req); err != nil {
 		return nil, fmt.Errorf("write: %w", err)
 	}
@@ -112,6 +123,52 @@ func GetDeviceInformationKBM(dev *hid.Device) ([]byte, error) {
 	}
 	_ = h
 	return data, nil
+}
+
+type MouseBatteryInfo struct {
+	Level      byte
+	Percent    int
+	IsCharging bool
+	RFStatus   byte
+}
+
+func GetMouseBatteryInfo(dev *hid.Device) (*MouseBatteryInfo, error) {
+	batteryRaw, err := GetKBMCommand(dev, GETCurrentBatteryInfo)
+	if err != nil {
+		return nil, fmt.Errorf("get battery: %w", err)
+	}
+	if len(batteryRaw) < 1 {
+		return nil, fmt.Errorf("battery response too short")
+	}
+
+	info := &MouseBatteryInfo{
+		Level:   batteryRaw[0],
+		Percent: MouseBatteryLevelToPercent(batteryRaw[0]),
+	}
+
+	if chargeRaw, err := GetKBMCommand(dev, GETChargeStatus); err == nil && len(chargeRaw) > 0 {
+		info.IsCharging = chargeRaw[0] == 1
+	}
+	if rfRaw, err := GetKBMCommand(dev, GETWirelessMouseStatus); err == nil && len(rfRaw) > 0 {
+		info.RFStatus = rfRaw[0]
+	}
+
+	return info, nil
+}
+
+func MouseBatteryLevelToPercent(level byte) int {
+	switch level {
+	case MouseBatteryLevelLow:
+		return 10
+	case MouseBatteryLevelLowMid:
+		return 40
+	case MouseBatteryLevelHighMid:
+		return 70
+	case MouseBatteryLevelHigh:
+		return 100
+	default:
+		return 0
+	}
 }
 
 // ParseMouseDeviceInfo parses the 18-byte GET_DEVICE_INFORMATION response for mice.
