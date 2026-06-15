@@ -735,7 +735,7 @@ func getSerialVolume(serial *protocol.SerialHeadset, eventID byte, warnings *[]s
 		appendProbeWarning(warnings, fmt.Sprintf("serial event %d", eventID), fmt.Errorf("volume payload too short"))
 		return nil
 	}
-	return &VolumeState{Mute: int(pkt.Param[0]), Raw: int(pkt.Param[1]), Percent: int(pkt.Param[2])}
+	return &VolumeState{Mute: int(pkt.Param[0]), Raw: int(pkt.Param[1]), Percent: devicePercent(pkt.Param[2])}
 }
 
 func getSerialAmbient(serial *protocol.SerialHeadset, warnings *[]string) *AmbientState {
@@ -748,7 +748,7 @@ func getSerialAmbient(serial *protocol.SerialHeadset, warnings *[]string) *Ambie
 		appendProbeWarning(warnings, "serial ambient", fmt.Errorf("payload too short"))
 		return nil
 	}
-	return &AmbientState{Mode: int(pkt.Param[0]), AmbientRaw: int(pkt.Param[1]), AmbientPercent: int(pkt.Param[2]), VoiceFocus: pkt.Param[3] != 0}
+	return &AmbientState{Mode: int(pkt.Param[0]), AmbientRaw: int(pkt.Param[1]), AmbientPercent: devicePercent(pkt.Param[2]), VoiceFocus: pkt.Param[3] != 0}
 }
 
 func getSerialSidetone(serial *protocol.SerialHeadset, warnings *[]string) *VolumeState {
@@ -761,7 +761,7 @@ func getSerialSidetone(serial *protocol.SerialHeadset, warnings *[]string) *Volu
 		appendProbeWarning(warnings, "serial sidetone", fmt.Errorf("payload too short"))
 		return nil
 	}
-	return &VolumeState{Raw: int(pkt.Param[0]), Percent: int(pkt.Param[1])}
+	return &VolumeState{Raw: int(pkt.Param[0]), Percent: devicePercent(pkt.Param[1])}
 }
 
 func getSerialSimpleState(serial *protocol.SerialHeadset, eventID byte, warnings *[]string) *SimpleState {
@@ -873,7 +873,7 @@ func getVolume(dev *hid.Device, eventID byte) (*VolumeState, error) {
 	if len(pkt.Param) < 3 {
 		return nil, fmt.Errorf("volume payload too short")
 	}
-	return &VolumeState{Mute: int(pkt.Param[0]), Raw: int(pkt.Param[1]), Percent: int(pkt.Param[2])}, nil
+	return &VolumeState{Mute: int(pkt.Param[0]), Raw: int(pkt.Param[1]), Percent: devicePercent(pkt.Param[2])}, nil
 }
 
 func getAmbient(dev *hid.Device) (*AmbientState, error) {
@@ -884,7 +884,7 @@ func getAmbient(dev *hid.Device) (*AmbientState, error) {
 	if len(pkt.Param) < 4 {
 		return nil, fmt.Errorf("ambient payload too short")
 	}
-	return &AmbientState{Mode: int(pkt.Param[0]), AmbientRaw: int(pkt.Param[1]), AmbientPercent: int(pkt.Param[2]), VoiceFocus: pkt.Param[3] != 0}, nil
+	return &AmbientState{Mode: int(pkt.Param[0]), AmbientRaw: int(pkt.Param[1]), AmbientPercent: devicePercent(pkt.Param[2]), VoiceFocus: pkt.Param[3] != 0}, nil
 }
 
 func getSidetone(dev *hid.Device, warnings *[]string) *VolumeState {
@@ -897,7 +897,7 @@ func getSidetone(dev *hid.Device, warnings *[]string) *VolumeState {
 		appendProbeWarning(warnings, "sidetone", fmt.Errorf("payload too short"))
 		return nil
 	}
-	return &VolumeState{Raw: int(pkt.Param[0]), Percent: int(pkt.Param[1])}
+	return &VolumeState{Raw: int(pkt.Param[0]), Percent: devicePercent(pkt.Param[1])}
 }
 
 func getSimpleState(dev *hid.Device, eventID byte, warnings *[]string) *SimpleState {
@@ -939,6 +939,13 @@ func budsVolume(v *airoha.BudsVolumeInfo) *VolumeState {
 
 func batteryCell(percent byte, status byte) *BatteryCell {
 	return &BatteryCell{Percent: int(percent), Status: int(status)}
+}
+
+func devicePercent(value byte) int {
+	if value <= 100 {
+		return int(value)
+	}
+	return int((uint16(value)*100 + 127) / 255)
 }
 
 func percentByte(v int) (byte, error) {
