@@ -48,9 +48,15 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e53", ENV{ID_MM_D
 SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e4c", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", GROUP:="input", MODE:="0660", TAG+="uaccess"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e61", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", GROUP:="input", MODE:="0660", TAG+="uaccess"
 
-# Do not set UPOWER_BATTERY_TYPE for these power_supply nodes. KDE PowerDevil's
-# battery page only accepts UPower Type=Battery/Ups, and audio-device types are
-# intentionally filtered there.
+# Mark INZONE batteries as device batteries instead of letting UPower guess them
+# as generic/internal batteries.
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_left_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_right_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_case_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ATTRS{idProduct}=="0fae", ENV{UPOWER_BATTERY_TYPE}:="mouse"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ATTRS{idProduct}=="0faf", ENV{UPOWER_BATTERY_TYPE}:="mouse"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ATTRS{idProduct}=="0fb0", ENV{UPOWER_BATTERY_TYPE}:="keyboard"
 `
 
 type DeviceSummary struct {
@@ -94,6 +100,29 @@ type AmbientState struct {
 	VoiceFocus     bool `json:"voiceFocus"`
 }
 
+type MouseState struct {
+	CurrentProfile int                `json:"currentProfile"`
+	DPI            int                `json:"dpi"`
+	ReportRateHz   int                `json:"reportRateHz"`
+	LODLevel       int                `json:"lodLevel"`
+	SensorSnap     bool               `json:"sensorSnap"`
+	MotionSync     bool               `json:"motionSync"`
+	LEDBrightness  int                `json:"ledBrightness"`
+	LEDRed         int                `json:"ledRed"`
+	LEDGreen       int                `json:"ledGreen"`
+	LEDBlue        int                `json:"ledBlue"`
+	RFStatus       int                `json:"rfStatus"`
+	Buttons        []MouseButtonState `json:"buttons"`
+}
+
+type MouseButtonState struct {
+	ButtonIndex int `json:"buttonIndex"`
+	TypeDef     int `json:"typeDef"`
+	KeyType     int `json:"keyType"`
+	KeyCode1    int `json:"keyCode1"`
+	KeyCode2    int `json:"keyCode2"`
+}
+
 type SimpleState struct {
 	EventID int   `json:"eventId"`
 	Value   *int  `json:"value,omitempty"`
@@ -112,6 +141,7 @@ type DeviceState struct {
 	HeadphoneVolume *VolumeState  `json:"headphoneVolume,omitempty"`
 	MicVolume       *VolumeState  `json:"micVolume,omitempty"`
 	Ambient         *AmbientState `json:"ambient,omitempty"`
+	Mouse           *MouseState   `json:"mouse,omitempty"`
 	GameChatMix     *SimpleState  `json:"gameChatMix,omitempty"`
 	Sidetone        *VolumeState  `json:"sidetone,omitempty"`
 	Surround        *SimpleState  `json:"surround,omitempty"`
@@ -221,15 +251,54 @@ func (s *Service) GetDeviceState(index int) (*DeviceState, error) {
 
 	if isKBM(info.ProductID) {
 		if usb.IsMouse(info.ProductID) {
+			mouseState := &MouseState{}
 			if batt, err := protocol.GetMouseBatteryInfo(dev); err == nil {
 				status := 0
 				if batt.IsCharging {
 					status = 1
 				}
 				state.Battery.Headset = &BatteryCell{Percent: batt.Percent, Status: status}
+				mouseState.RFStatus = int(batt.RFStatus)
 			} else {
 				state.Warnings = append(state.Warnings, fmt.Sprintf("mouse battery: %v", err))
 			}
+			if raw, err := protocol.GetDeviceInformationKBM(dev); err == nil {
+				if info, err := protocol.ParseMouseInfo(raw); err == nil {
+					mouseState.CurrentProfile = int(info.CurrentProfile)
+				} else {
+					state.Warnings = append(state.Warnings, fmt.Sprintf("mouse device info: %v", err))
+				}
+			} else {
+				state.Warnings = append(state.Warnings, fmt.Sprintf("mouse device info: %v", err))
+			}
+			if fn, err := protocol.GetMouseProfileFunction(dev); err == nil {
+				mouseState.DPI = int(fn.DPI)
+				mouseState.ReportRateHz = fn.ReportRateHz
+				mouseState.LODLevel = int(fn.LODLevel)
+				mouseState.SensorSnap = fn.SensorSnap
+				mouseState.MotionSync = fn.MotionSync
+				mouseState.LEDBrightness = int(fn.LEDBrightness)
+				mouseState.LEDRed = int(fn.LEDRed)
+				mouseState.LEDGreen = int(fn.LEDGreen)
+				mouseState.LEDBlue = int(fn.LEDBlue)
+			} else {
+				state.Warnings = append(state.Warnings, fmt.Sprintf("mouse profile function: %v", err))
+			}
+			if buttons, err := protocol.GetMouseButtons(dev); err == nil {
+				mouseState.Buttons = make([]MouseButtonState, len(buttons))
+				for i, button := range buttons {
+					mouseState.Buttons[i] = MouseButtonState{
+						ButtonIndex: int(button.ButtonIndex),
+						TypeDef:     int(button.TypeDef),
+						KeyType:     int(button.KeyType),
+						KeyCode1:    int(button.KeyCode1),
+						KeyCode2:    int(button.KeyCode2),
+					}
+				}
+			} else {
+				state.Warnings = append(state.Warnings, fmt.Sprintf("mouse buttons: %v", err))
+			}
+			state.Mouse = mouseState
 		}
 		return state, nil
 	}
@@ -502,6 +571,113 @@ func (s *Service) SetAssignableAction(index int, slot int, action int) error {
 	})
 }
 
+func (s *Service) SetMouseProfile(index int, profile int) error {
+	value, err := boundedByte(profile, 1, 4, "mouse profile")
+	if err != nil {
+		return err
+	}
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetProfileNumber(dev, value)
+	})
+}
+
+func (s *Service) SetMouseDPI(index int, dpi int) error {
+	if dpi < 0 || dpi > 65535 {
+		return fmt.Errorf("DPI must be 0-65535")
+	}
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetDPI(dev, uint16(dpi))
+	})
+}
+
+func (s *Service) SetMouseLED(index int, brightness int, red int, green int, blue int) error {
+	bri, err := boundedByte(brightness, 0, 255, "LED brightness")
+	if err != nil {
+		return err
+	}
+	r, err := boundedByte(red, 0, 255, "LED red")
+	if err != nil {
+		return err
+	}
+	g, err := boundedByte(green, 0, 255, "LED green")
+	if err != nil {
+		return err
+	}
+	b, err := boundedByte(blue, 0, 255, "LED blue")
+	if err != nil {
+		return err
+	}
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetLEDLighting(dev, bri, r, g, b)
+	})
+}
+
+func (s *Service) SetMouseLOD(index int, level int) error {
+	value, err := boundedByte(level, 0, 2, "mouse LOD level")
+	if err != nil {
+		return err
+	}
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetLOD(dev, value)
+	})
+}
+
+func (s *Service) SetMouseMotionSync(index int, enabled bool) error {
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetMotionSync(dev, enabled)
+	})
+}
+
+func (s *Service) SetMouseSensorSnap(index int, enabled bool) error {
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetSensorSnap(dev, enabled)
+	})
+}
+
+func (s *Service) SetMouseReportRate(index int, hz int) error {
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetReportRate(dev, hz)
+	})
+}
+
+func (s *Service) SetMouseButton(index int, buttonIndex int, typeDef int, keyType int, keyCode1 int, keyCode2 int) error {
+	button, err := boundedByte(buttonIndex, 1, 5, "mouse button")
+	if err != nil {
+		return err
+	}
+	typeValue, err := boundedByte(typeDef, 0, 255, "mouse button type definition")
+	if err != nil {
+		return err
+	}
+	keyTypeValue, err := boundedByte(keyType, 0, 255, "mouse button key type")
+	if err != nil {
+		return err
+	}
+	key1, err := boundedByte(keyCode1, 0, 255, "mouse button key code 1")
+	if err != nil {
+		return err
+	}
+	key2, err := boundedByte(keyCode2, 0, 255, "mouse button key code 2")
+	if err != nil {
+		return err
+	}
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SetMouseButton(dev, button, typeValue, keyTypeValue, key1, key2)
+	})
+}
+
+func (s *Service) SaveMouseToProfile(index int) error {
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.SaveMouseToProfile(dev)
+	})
+}
+
+func (s *Service) ResetMouseToDefault(index int) error {
+	return withMouse(index, func(dev *hid.Device) error {
+		return protocol.ResetMouseToDefault(dev)
+	})
+}
+
 func (s *Service) RepairUdevPermissions() error {
 	if _, err := exec.LookPath("pkexec"); err != nil {
 		return fmt.Errorf("pkexec is required to install udev rules: %w", err)
@@ -584,6 +760,12 @@ func openDevice(index int) (*hid.Device, DeviceSummary, func(), error) {
 	openInfo := base
 	if usb.IsBuds(base.ProductID) {
 		control, err := usb.FindBudsControlInterface(base)
+		if err != nil {
+			return nil, summarizeDevice(index, base), nil, err
+		}
+		openInfo = control
+	} else if isKBM(base.ProductID) {
+		control, err := usb.FindProtocolAInterface(base)
 		if err != nil {
 			return nil, summarizeDevice(index, base), nil, err
 		}
@@ -931,6 +1113,25 @@ func headsetOnly(index int, label string, fn func(*hid.Device) error) error {
 		}
 		return fn(dev)
 	})
+}
+
+func withMouse(index int, fn func(*hid.Device) error) error {
+	base, err := deviceByIndex(index)
+	if err != nil {
+		return err
+	}
+	if !usb.IsMouse(base.ProductID) {
+		return fmt.Errorf("%s is not a mouse device", base.Model)
+	}
+	dev, info, cleanup, err := openDevice(index)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	if !usb.IsMouse(info.ProductID) {
+		return fmt.Errorf("%s is not a mouse device", info.Model)
+	}
+	return fn(dev)
 }
 
 func budsVolume(v *airoha.BudsVolumeInfo) *VolumeState {

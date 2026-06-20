@@ -6,6 +6,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/sstallion/go-hid v0.15.0
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.98
+	go.bug.st/serial v1.7.1
 )
 
 require (
@@ -37,7 +38,6 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/wailsapp/wails/webview2 v1.0.24 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	go.bug.st/serial v1.7.1 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect

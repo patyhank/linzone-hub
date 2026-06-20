@@ -46,7 +46,7 @@ Linux 桌面的電量頁面通常讀 UPower。UPower 沒有提供一般 userspac
 /sys/class/power_supply/inzone_battery_*
 ```
 
-接著 UPower 會把它們匯出成：
+這些節點會宣告為 `Scope=Device`，並透過 udev 標記成 headset / mouse / keyboard 類型，避免桌面環境用「內部電池」方式顯示。接著 UPower 會把它們匯出成：
 
 ```text
 /org/freedesktop/UPower/devices/

@@ -28,6 +28,12 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e53", ENV{ID_MM_D
 SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e4c", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", GROUP:="input", MODE:="0660", TAG+="uaccess"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0e61", ENV{ID_MM_DEVICE_IGNORE}="1", ENV{ID_MM_PORT_IGNORE}="1", GROUP:="input", MODE:="0660", TAG+="uaccess"
 
-# Do not set UPOWER_BATTERY_TYPE for these power_supply nodes. KDE PowerDevil's
-# battery page only accepts UPower Type=Battery/Ups, and audio-device types are
-# intentionally filtered there.
+# Mark INZONE batteries as device batteries instead of letting UPower guess them
+# as generic/internal batteries.
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_left_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_right_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_case_*", ENV{UPOWER_BATTERY_TYPE}="headset"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ATTRS{idProduct}=="0fae", ENV{UPOWER_BATTERY_TYPE}:="mouse"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ATTRS{idProduct}=="0faf", ENV{UPOWER_BATTERY_TYPE}:="mouse"
+SUBSYSTEM=="power_supply", KERNEL=="inzone_battery_headset_*", ATTRS{idProduct}=="0fb0", ENV{UPOWER_BATTERY_TYPE}:="keyboard"

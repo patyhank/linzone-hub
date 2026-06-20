@@ -11,3 +11,26 @@ docs/INZONEHub_Setup_*.exe
 /packaging/arch/*.pkg.tar.zst
 /packaging/arch/pkg/
 /packaging/arch/src/
+
+# Kernel module build artifacts
+*.o
+*.o.cmd
+*.ko
+*.ko.cmd
+*.mod
+*.mod.c
+*.mod.cmd
+*.mod.o
+*.order.cmd
+*.symvers.cmd
+
+Module.symvers
+modules.order
+
+.tmp_versions/
+*.symvers
+*.order
+
+# clangd / editor
+.clangd
+.cache/

@@ -14,6 +14,8 @@ export {
     DeviceState,
     DeviceSummary,
     FeatureStatus,
+    MouseButtonState,
+    MouseState,
     SimpleState,
     VolumeState
 } from "./models.js";

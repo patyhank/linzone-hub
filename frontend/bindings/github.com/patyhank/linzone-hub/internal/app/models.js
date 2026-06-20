@@ -241,6 +241,13 @@ export class DeviceState {
         if (/** @type {any} */(false)) {
             /**
              * @member
+             * @type {MouseState | null | undefined}
+             */
+            this["mouse"] = undefined;
+        }
+        if (/** @type {any} */(false)) {
+            /**
+             * @member
              * @type {SimpleState | null | undefined}
              */
             this["gameChatMix"] = undefined;
@@ -331,16 +338,17 @@ export class DeviceState {
         const $$createField9_0 = $$createType5;
         const $$createField10_0 = $$createType7;
         const $$createField11_0 = $$createType9;
-        const $$createField12_0 = $$createType5;
-        const $$createField13_0 = $$createType9;
-        const $$createField14_0 = $$createType9;
-        const $$createField15_0 = $$createType9;
-        const $$createField16_0 = $$createType9;
-        const $$createField17_0 = $$createType9;
-        const $$createField18_0 = $$createType9;
-        const $$createField19_0 = $$createType9;
-        const $$createField20_0 = $$createType9;
-        const $$createField21_0 = $$createType10;
+        const $$createField12_0 = $$createType11;
+        const $$createField13_0 = $$createType5;
+        const $$createField14_0 = $$createType11;
+        const $$createField15_0 = $$createType11;
+        const $$createField16_0 = $$createType11;
+        const $$createField17_0 = $$createType11;
+        const $$createField18_0 = $$createType11;
+        const $$createField19_0 = $$createType11;
+        const $$createField20_0 = $$createType11;
+        const $$createField21_0 = $$createType11;
+        const $$createField22_0 = $$createType12;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("device" in $$parsedSource) {
             $$parsedSource["device"] = $$createField0_0($$parsedSource["device"]);
@@ -357,38 +365,41 @@ export class DeviceState {
         if ("ambient" in $$parsedSource) {
             $$parsedSource["ambient"] = $$createField10_0($$parsedSource["ambient"]);
         }
+        if ("mouse" in $$parsedSource) {
+            $$parsedSource["mouse"] = $$createField11_0($$parsedSource["mouse"]);
+        }
         if ("gameChatMix" in $$parsedSource) {
-            $$parsedSource["gameChatMix"] = $$createField11_0($$parsedSource["gameChatMix"]);
+            $$parsedSource["gameChatMix"] = $$createField12_0($$parsedSource["gameChatMix"]);
         }
         if ("sidetone" in $$parsedSource) {
-            $$parsedSource["sidetone"] = $$createField12_0($$parsedSource["sidetone"]);
+            $$parsedSource["sidetone"] = $$createField13_0($$parsedSource["sidetone"]);
         }
         if ("surround" in $$parsedSource) {
-            $$parsedSource["surround"] = $$createField13_0($$parsedSource["surround"]);
+            $$parsedSource["surround"] = $$createField14_0($$parsedSource["surround"]);
         }
         if ("btStatus" in $$parsedSource) {
-            $$parsedSource["btStatus"] = $$createField14_0($$parsedSource["btStatus"]);
+            $$parsedSource["btStatus"] = $$createField15_0($$parsedSource["btStatus"]);
         }
         if ("btSoundQuality" in $$parsedSource) {
-            $$parsedSource["btSoundQuality"] = $$createField15_0($$parsedSource["btSoundQuality"]);
+            $$parsedSource["btSoundQuality"] = $$createField16_0($$parsedSource["btSoundQuality"]);
         }
         if ("btStartupMode" in $$parsedSource) {
-            $$parsedSource["btStartupMode"] = $$createField16_0($$parsedSource["btStartupMode"]);
+            $$parsedSource["btStartupMode"] = $$createField17_0($$parsedSource["btStartupMode"]);
         }
         if ("autoPowerOff" in $$parsedSource) {
-            $$parsedSource["autoPowerOff"] = $$createField17_0($$parsedSource["autoPowerOff"]);
+            $$parsedSource["autoPowerOff"] = $$createField18_0($$parsedSource["autoPowerOff"]);
         }
         if ("ncStartupMode" in $$parsedSource) {
-            $$parsedSource["ncStartupMode"] = $$createField18_0($$parsedSource["ncStartupMode"]);
+            $$parsedSource["ncStartupMode"] = $$createField19_0($$parsedSource["ncStartupMode"]);
         }
         if ("connectionMode" in $$parsedSource) {
-            $$parsedSource["connectionMode"] = $$createField19_0($$parsedSource["connectionMode"]);
+            $$parsedSource["connectionMode"] = $$createField20_0($$parsedSource["connectionMode"]);
         }
         if ("assignable" in $$parsedSource) {
-            $$parsedSource["assignable"] = $$createField20_0($$parsedSource["assignable"]);
+            $$parsedSource["assignable"] = $$createField21_0($$parsedSource["assignable"]);
         }
         if ("warnings" in $$parsedSource) {
-            $$parsedSource["warnings"] = $$createField21_0($$parsedSource["warnings"]);
+            $$parsedSource["warnings"] = $$createField22_0($$parsedSource["warnings"]);
         }
         return new DeviceState(/** @type {Partial<DeviceState>} */($$parsedSource));
     }
@@ -548,6 +559,171 @@ export class FeatureStatus {
     }
 }
 
+export class MouseButtonState {
+    /**
+     * Creates a new MouseButtonState instance.
+     * @param {Partial<MouseButtonState>} [$$source = {}] - The source object to create the MouseButtonState.
+     */
+    constructor($$source = {}) {
+        if (!("buttonIndex" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["buttonIndex"] = 0;
+        }
+        if (!("typeDef" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["typeDef"] = 0;
+        }
+        if (!("keyType" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["keyType"] = 0;
+        }
+        if (!("keyCode1" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["keyCode1"] = 0;
+        }
+        if (!("keyCode2" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["keyCode2"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MouseButtonState instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {MouseButtonState}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MouseButtonState(/** @type {Partial<MouseButtonState>} */($$parsedSource));
+    }
+}
+
+export class MouseState {
+    /**
+     * Creates a new MouseState instance.
+     * @param {Partial<MouseState>} [$$source = {}] - The source object to create the MouseState.
+     */
+    constructor($$source = {}) {
+        if (!("currentProfile" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["currentProfile"] = 0;
+        }
+        if (!("dpi" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["dpi"] = 0;
+        }
+        if (!("reportRateHz" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["reportRateHz"] = 0;
+        }
+        if (!("lodLevel" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["lodLevel"] = 0;
+        }
+        if (!("sensorSnap" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["sensorSnap"] = false;
+        }
+        if (!("motionSync" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["motionSync"] = false;
+        }
+        if (!("ledBrightness" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["ledBrightness"] = 0;
+        }
+        if (!("ledRed" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["ledRed"] = 0;
+        }
+        if (!("ledGreen" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["ledGreen"] = 0;
+        }
+        if (!("ledBlue" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["ledBlue"] = 0;
+        }
+        if (!("rfStatus" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["rfStatus"] = 0;
+        }
+        if (!("buttons" in $$source)) {
+            /**
+             * @member
+             * @type {MouseButtonState[]}
+             */
+            this["buttons"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MouseState instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {MouseState}
+     */
+    static createFrom($$source = {}) {
+        const $$createField11_0 = $$createType14;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("buttons" in $$parsedSource) {
+            $$parsedSource["buttons"] = $$createField11_0($$parsedSource["buttons"]);
+        }
+        return new MouseState(/** @type {Partial<MouseState>} */($$parsedSource));
+    }
+}
+
 export class SimpleState {
     /**
      * Creates a new SimpleState instance.
@@ -585,7 +761,7 @@ export class SimpleState {
      * @returns {SimpleState}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType11;
+        const $$createField2_0 = $$createType15;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("raw" in $$parsedSource) {
             $$parsedSource["raw"] = $$createField2_0($$parsedSource["raw"]);
@@ -645,7 +821,11 @@ const $$createType4 = VolumeState.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
 const $$createType6 = AmbientState.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = SimpleState.createFrom;
+const $$createType8 = MouseState.createFrom;
 const $$createType9 = $Create.Nullable($$createType8);
-const $$createType10 = $Create.Array($Create.Any);
-const $$createType11 = $Create.Array($Create.Any);
+const $$createType10 = SimpleState.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = $Create.Array($Create.Any);
+const $$createType13 = MouseButtonState.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = $Create.Array($Create.Any);

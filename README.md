@@ -46,7 +46,7 @@ For USB / 2.4 GHz INZONE devices, LINZONE Hub uses a DKMS HID module to register
 /sys/class/power_supply/inzone_battery_*
 ```
 
-UPower then exposes those as:
+Those nodes declare `Scope=Device` and are tagged by udev as headset / mouse / keyboard batteries so desktop environments do not classify them as internal batteries. UPower then exposes those as:
 
 ```text
 /org/freedesktop/UPower/devices/

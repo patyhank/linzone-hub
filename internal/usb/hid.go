@@ -106,6 +106,10 @@ func isProtocolAInterface(info *hid.DeviceInfo) bool {
 	return info.UsagePage == 0xFF00 || info.UsagePage == 0xFF90 || info.UsagePage == 0xFF04
 }
 
+func isPreferredProtocolAInterface(info *hid.DeviceInfo) bool {
+	return isProtocolAInterface(info)
+}
+
 func isBudsRaceInterface(info *hid.DeviceInfo) bool {
 	return IsBuds(info.ProductID) && info.UsagePage == UsagePageAirohaRace
 }
@@ -121,6 +125,15 @@ func isLikelySonyControlInterface(info *hid.DeviceInfo) bool {
 }
 
 func deviceKey(info *hid.DeviceInfo) string {
+	if IsMouse(info.ProductID) || IsKeyboard(info.ProductID) {
+		if info.SerialNbr != "" {
+			return fmt.Sprintf("kbm:serial:%s pid:%04x", info.SerialNbr, info.ProductID)
+		}
+		if info.ProductStr != "" {
+			return fmt.Sprintf("kbm:product:%s pid:%04x", info.ProductStr, info.ProductID)
+		}
+		return fmt.Sprintf("kbm:pid:%04x", info.ProductID)
+	}
 	if info.Path != "" {
 		return fmt.Sprintf("path:%s pid:%04x", info.Path, info.ProductID)
 	}
@@ -138,6 +151,12 @@ func devicePreferenceScore(info *hid.DeviceInfo) int {
 	switch {
 	case isBudsRaceInterface(info):
 		score = -100
+	case (IsMouse(info.ProductID) || IsKeyboard(info.ProductID)) && info.UsagePage == 0xFF00:
+		score = 160
+	case (IsMouse(info.ProductID) || IsKeyboard(info.ProductID)) && info.UsagePage == 0xFF90:
+		score = 150
+	case (IsMouse(info.ProductID) || IsKeyboard(info.ProductID)) && info.UsagePage == 0xFF04:
+		score = 140
 	case IsBuds(info.ProductID) && info.UsagePage == 0xFF04:
 		score = 140
 	case IsBuds(info.ProductID) && info.UsagePage == 0xFF01:
@@ -284,6 +303,37 @@ func FindHeadsetControlInterfaces(base DeviceInfo) ([]DeviceInfo, error) {
 		return devicePreferenceScore(&matches[i].DeviceInfo) > devicePreferenceScore(&matches[j].DeviceInfo)
 	})
 	return matches, nil
+}
+
+func FindProtocolAInterface(base DeviceInfo) (DeviceInfo, error) {
+	if !IsMouse(base.ProductID) && !IsKeyboard(base.ProductID) {
+		return DeviceInfo{}, fmt.Errorf("%s is not a keyboard/mouse Protocol A device", base.Model)
+	}
+	if isPreferredProtocolAInterface(&base.DeviceInfo) {
+		return base, nil
+	}
+
+	var matches []DeviceInfo
+	err := hid.Enumerate(SonyVID, base.ProductID, func(info *hid.DeviceInfo) error {
+		if !samePhysicalDevice(base, info) || !isPreferredProtocolAInterface(info) {
+			return nil
+		}
+		matches = append(matches, DeviceInfo{DeviceInfo: *info, Model: GetModelName(info.ProductID)})
+		return nil
+	})
+	if err != nil {
+		return DeviceInfo{}, err
+	}
+	if len(matches) == 0 {
+		if base.Path != "" {
+			return base, nil
+		}
+		return DeviceInfo{}, fmt.Errorf("no Protocol A HID collection found for %s", base.Model)
+	}
+	sort.Slice(matches, func(i, j int) bool {
+		return devicePreferenceScore(&matches[i].DeviceInfo) > devicePreferenceScore(&matches[j].DeviceInfo)
+	})
+	return matches[0], nil
 }
 
 // FindBudsRaceInterface locates the UsagePage 0xFF13 Airoha Race collection for the selected Buds device.

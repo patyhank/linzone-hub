@@ -47,6 +47,22 @@ export function RepairUdevPermissions() {
 
 /**
  * @param {number} index
+ * @returns {$CancellablePromise<void>}
+ */
+export function ResetMouseToDefault(index) {
+    return $Call.ByID(1849047065, index);
+}
+
+/**
+ * @param {number} index
+ * @returns {$CancellablePromise<void>}
+ */
+export function SaveMouseToProfile(index) {
+    return $Call.ByID(4064444157, index);
+}
+
+/**
+ * @param {number} index
  * @param {number} mode
  * @param {number} level
  * @param {boolean} voiceFocus
@@ -136,6 +152,85 @@ export function SetIncomingPermission(index, enabled) {
  */
 export function SetMicVolume(index, percent) {
     return $Call.ByID(1066111170, index, percent);
+}
+
+/**
+ * @param {number} index
+ * @param {number} buttonIndex
+ * @param {number} typeDef
+ * @param {number} keyType
+ * @param {number} keyCode1
+ * @param {number} keyCode2
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseButton(index, buttonIndex, typeDef, keyType, keyCode1, keyCode2) {
+    return $Call.ByID(1847493072, index, buttonIndex, typeDef, keyType, keyCode1, keyCode2);
+}
+
+/**
+ * @param {number} index
+ * @param {number} dpi
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseDPI(index, dpi) {
+    return $Call.ByID(4188952939, index, dpi);
+}
+
+/**
+ * @param {number} index
+ * @param {number} brightness
+ * @param {number} red
+ * @param {number} green
+ * @param {number} blue
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseLED(index, brightness, red, green, blue) {
+    return $Call.ByID(2182553705, index, brightness, red, green, blue);
+}
+
+/**
+ * @param {number} index
+ * @param {number} level
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseLOD(index, level) {
+    return $Call.ByID(2651341299, index, level);
+}
+
+/**
+ * @param {number} index
+ * @param {boolean} enabled
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseMotionSync(index, enabled) {
+    return $Call.ByID(40018365, index, enabled);
+}
+
+/**
+ * @param {number} index
+ * @param {number} profile
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseProfile(index, profile) {
+    return $Call.ByID(3425088801, index, profile);
+}
+
+/**
+ * @param {number} index
+ * @param {number} hz
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseReportRate(index, hz) {
+    return $Call.ByID(1833731828, index, hz);
+}
+
+/**
+ * @param {number} index
+ * @param {boolean} enabled
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetMouseSensorSnap(index, enabled) {
+    return $Call.ByID(2686126190, index, enabled);
 }
 
 /**

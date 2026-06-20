@@ -22,13 +22,28 @@ const (
 	// Common command IDs (16-bit: index<<8 | cmd)
 	GETDeviceInformation     = 0x00A0
 	GETCurrentBatteryInfo    = 0x04A0
+	GETProfileFunction       = 0x05A0
+	GETButtonsRedefinedInfo  = 0x06A0
+	GETButtonsTypeInfo       = 0x07A0
 	GETWirelessMouseStatus   = 0x03A0
 	GETChargeStatus          = 0x09A0
+	SETProfileNumber         = 0x0020
+	SETLODLevel              = 0x0320
+	SETLEDLighting           = 0x0520
+	SETSensorSnap            = 0x0620
+	SETDPILevelValue         = 0x0720
+	SETMotionSync            = 0x0820
+	SETButtons               = 0x0920
+	SETReportRate            = 0x1020
+	SAVETOProfile            = 0x5020
+	RESETToDefault           = 0x6220
 	MouseBatteryLevelLow     = 0
 	MouseBatteryLevelLowMid  = 1
 	MouseBatteryLevelHighMid = 2
 	MouseBatteryLevelHigh    = 3
 )
+
+var mouseResetToDefaultMagic = []byte{0x36, 0x31, 0x18, 0x38, 0x27, 0x98, 0x10, 0x94}
 
 // KBMHeader is the 4-byte protocol A header
 type KBMHeader struct {
@@ -64,8 +79,12 @@ func RecvKBMReport(dev *hid.Device) ([]byte, error) {
 	if n < 1 {
 		return nil, fmt.Errorf("short read")
 	}
-	// buf[0] should be report ID 0
-	return buf[1:n], nil
+	// HID report ID 0 is backend-dependent: some reads include a leading 0,
+	// while others return the payload directly. Keep both forms working.
+	if buf[0] == ReportIDKBM && n > 1 && (buf[1] == CmdGET || buf[1] == CmdSET || buf[1] == CmdNOTIFY) {
+		return buf[1:n], nil
+	}
+	return buf[:n], nil
 }
 
 // BuildKBMGet builds a GET request packet for the given 16-bit command.
@@ -132,6 +151,26 @@ type MouseBatteryInfo struct {
 	RFStatus   byte
 }
 
+type MouseProfileFunction struct {
+	ReportRateHz  int
+	SensorSnap    bool
+	LODLevel      byte
+	DPI           uint16
+	MotionSync    bool
+	LEDBrightness byte
+	LEDRed        byte
+	LEDGreen      byte
+	LEDBlue       byte
+}
+
+type MouseButton struct {
+	ButtonIndex byte
+	TypeDef     byte
+	KeyType     byte
+	KeyCode1    byte
+	KeyCode2    byte
+}
+
 func GetMouseBatteryInfo(dev *hid.Device) (*MouseBatteryInfo, error) {
 	batteryRaw, err := GetKBMCommand(dev, GETCurrentBatteryInfo)
 	if err != nil {
@@ -154,6 +193,110 @@ func GetMouseBatteryInfo(dev *hid.Device) (*MouseBatteryInfo, error) {
 	}
 
 	return info, nil
+}
+
+func GetMouseProfileFunction(dev *hid.Device) (*MouseProfileFunction, error) {
+	raw, err := GetKBMCommand(dev, GETProfileFunction)
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) < 10 {
+		return nil, fmt.Errorf("mouse profile function needs 10 bytes, got %d", len(raw))
+	}
+	return &MouseProfileFunction{
+		ReportRateHz:  reportRateValueToHz(raw[0]),
+		SensorSnap:    raw[1] != 0,
+		LODLevel:      raw[2],
+		DPI:           binary.LittleEndian.Uint16(raw[3:5])*50 + 50,
+		MotionSync:    raw[5] != 0,
+		LEDBrightness: raw[6],
+		LEDRed:        raw[7],
+		LEDGreen:      raw[8],
+		LEDBlue:       raw[9],
+	}, nil
+}
+
+func GetMouseButtons(dev *hid.Device) ([]MouseButton, error) {
+	types, err := GetKBMCommand(dev, GETButtonsTypeInfo)
+	if err != nil {
+		return nil, fmt.Errorf("get button types: %w", err)
+	}
+	keys, err := GetKBMCommand(dev, GETButtonsRedefinedInfo)
+	if err != nil {
+		return nil, fmt.Errorf("get button keys: %w", err)
+	}
+	if len(types) < 5 {
+		return nil, fmt.Errorf("button type info needs 5 bytes, got %d", len(types))
+	}
+	if len(keys) < 15 {
+		return nil, fmt.Errorf("button key info needs 15 bytes, got %d", len(keys))
+	}
+	buttons := make([]MouseButton, 5)
+	for i := range buttons {
+		offset := i * 3
+		buttons[i] = MouseButton{
+			ButtonIndex: byte(i + 1),
+			TypeDef:     types[i],
+			KeyType:     keys[offset],
+			KeyCode1:    keys[offset+1],
+			KeyCode2:    keys[offset+2],
+		}
+	}
+	return buttons, nil
+}
+
+func mouseProfileFunctionPayload(fn *MouseProfileFunction) ([]byte, error) {
+	if fn == nil {
+		return nil, fmt.Errorf("mouse profile function is nil")
+	}
+	reportRate, err := reportRateHzToValue(fn.ReportRateHz)
+	if err != nil {
+		return nil, err
+	}
+	if fn.DPI < 50 || (fn.DPI-50)%50 != 0 {
+		return nil, fmt.Errorf("dpi must be >=50 and multiple of 50")
+	}
+	out := make([]byte, 10)
+	out[0] = reportRate
+	if fn.SensorSnap {
+		out[1] = 1
+	}
+	out[2] = fn.LODLevel
+	binary.LittleEndian.PutUint16(out[3:5], (fn.DPI-50)/50)
+	if fn.MotionSync {
+		out[5] = 1
+	}
+	out[6] = fn.LEDBrightness
+	out[7] = fn.LEDRed
+	out[8] = fn.LEDGreen
+	out[9] = fn.LEDBlue
+	return out, nil
+}
+
+func reportRateValueToHz(value byte) int {
+	switch value {
+	case 0, 1, 2, 3, 4:
+		return 500 << value
+	default:
+		return 0
+	}
+}
+
+func reportRateHzToValue(hz int) (byte, error) {
+	switch hz {
+	case 500:
+		return 0, nil
+	case 1000:
+		return 1, nil
+	case 2000:
+		return 2, nil
+	case 4000:
+		return 3, nil
+	case 8000:
+		return 4, nil
+	default:
+		return 0, fmt.Errorf("unsupported report rate %d (use 500/1000/2000/4000/8000)", hz)
+	}
 }
 
 func MouseBatteryLevelToPercent(level byte) int {
@@ -227,9 +370,32 @@ func SendKBMSetAndAck(dev *hid.Device, cmd16 uint16, packet byte, data []byte) e
 	}
 	_ = h // header should echo the SET we sent
 	if len(payload) < 2 {
-		return fmt.Errorf("ack too short")
+		status, ok := findKBMStatus(resp)
+		if !ok {
+			return fmt.Errorf("ack too short")
+		}
+		return kbmStatusError(status, nil)
 	}
 	status := binary.LittleEndian.Uint16(payload[0:2])
+	if status != 0xACDC && status != 0xFAEC {
+		if fallback, ok := findKBMStatus(resp); ok {
+			status = fallback
+		}
+	}
+	return kbmStatusError(status, payload)
+}
+
+func findKBMStatus(data []byte) (uint16, bool) {
+	for i := 0; i+1 < len(data); i++ {
+		status := binary.LittleEndian.Uint16(data[i : i+2])
+		if status == 0xACDC || status == 0xFAEC {
+			return status, true
+		}
+	}
+	return 0, false
+}
+
+func kbmStatusError(status uint16, payload []byte) error {
 	switch status {
 	case 0xACDC:
 		return nil
@@ -248,7 +414,7 @@ func SetProfileNumber(dev *hid.Device, profile byte) error {
 	if profile < 1 || profile > 4 {
 		return fmt.Errorf("profile must be 1-4")
 	}
-	return SendKBMSetAndAck(dev, 0x0020, 0, []byte{profile})
+	return SendKBMSetAndAck(dev, SETProfileNumber, 0, []byte{profile})
 }
 
 // SetDPI sets DPI for current profile. Command 0x0720.
@@ -260,12 +426,12 @@ func SetDPI(dev *hid.Device, dpi uint16) error {
 	wire := (dpi - 50) / 50
 	buf := make([]byte, 2)
 	binary.LittleEndian.PutUint16(buf, uint16(wire))
-	return SendKBMSetAndAck(dev, 0x0720, 0, buf)
+	return SendKBMSetAndAck(dev, SETDPILevelValue, 0, buf)
 }
 
 // SetLEDLighting sets LED [brightness(0-255), R, G, B]. Command 0x0520.
 func SetLEDLighting(dev *hid.Device, brightness, r, g, b byte) error {
-	return SendKBMSetAndAck(dev, 0x0520, 0, []byte{brightness, r, g, b})
+	return SendKBMSetAndAck(dev, SETLEDLighting, 0, []byte{brightness, r, g, b})
 }
 
 // SetLOD sets lift-off distance. Command 0x0320. 0=0.7mm, 1=1.0mm, 2=2.0mm.
@@ -273,7 +439,7 @@ func SetLOD(dev *hid.Device, level byte) error {
 	if level > 2 {
 		return fmt.Errorf("lod level must be 0,1,2")
 	}
-	return SendKBMSetAndAck(dev, 0x0320, 0, []byte{level})
+	return SendKBMSetAndAck(dev, SETLODLevel, 0, []byte{level})
 }
 
 // SetMotionSync enables/disables motion sync. Command 0x0820. 0=off, 1=on.
@@ -282,7 +448,7 @@ func SetMotionSync(dev *hid.Device, on bool) error {
 	if on {
 		v = 1
 	}
-	return SendKBMSetAndAck(dev, 0x0820, 0, []byte{v})
+	return SendKBMSetAndAck(dev, SETMotionSync, 0, []byte{v})
 }
 
 // SetSensorSnap sets angle snapping. Command 0x0620. 0=off, 1=on.
@@ -291,38 +457,75 @@ func SetSensorSnap(dev *hid.Device, on bool) error {
 	if on {
 		v = 1
 	}
-	return SendKBMSetAndAck(dev, 0x0620, 0, []byte{v})
+	return SendKBMSetAndAck(dev, SETSensorSnap, 0, []byte{v})
 }
 
 // SetReportRate sets polling rate. Command 0x1020.
 // Supported: 500,1000,2000,4000,8000 (maps to 0..4)
 func SetReportRate(dev *hid.Device, hz int) error {
-	var v byte
-	switch hz {
-	case 500:
-		v = 0
-	case 1000:
-		v = 1
-	case 2000:
-		v = 2
-	case 4000:
-		v = 3
-	case 8000:
-		v = 4
-	default:
-		return fmt.Errorf("unsupported report rate %d (use 500/1000/2000/4000/8000)", hz)
+	v, err := reportRateHzToValue(hz)
+	if err != nil {
+		return err
 	}
-	return SendKBMSetAndAck(dev, 0x1020, 0, []byte{v})
+	return SendKBMSetAndAck(dev, SETReportRate, 0, []byte{v})
 }
 
 // SetButtons sets button remapping for one button (6 bytes).
 // See technical reference for the 6-byte layout.
 // This is low-level; higher level button config helpers can be added later.
 func SetButton(dev *hid.Device, buttonIndex byte, data6 [6]byte) error {
-	if buttonIndex > 5 {
+	if buttonIndex < 1 || buttonIndex > 5 {
 		return fmt.Errorf("button index 1-5")
 	}
 	// The command SET_BUTTONS sends 6 bytes per button; the "Packet" field may select the button in some implementations.
 	// From the table, SET_BUTTONS (2336=0x0920). Many implementations send one button at a time using Packet field.
-	return SendKBMSetAndAck(dev, 0x0920, buttonIndex, data6[:])
+	return SendKBMSetAndAck(dev, SETButtons, buttonIndex, data6[:])
+}
+
+func SetMouseButton(dev *hid.Device, buttonIndex, typeDef, keyType, keyCode1, keyCode2 byte) error {
+	if typeDef != 0xFF && typeDef != 0x00 && typeDef != 0x40 {
+		return fmt.Errorf("button type definition must be 0xFF, 0x00, or 0x40")
+	}
+	if keyType != 0xFF && keyType > 2 {
+		return fmt.Errorf("button key type must be 0xFF, 0, 1, or 2")
+	}
+	return SetButton(dev, buttonIndex, [6]byte{typeDef, 0, 0, keyType, keyCode1, keyCode2})
+}
+
+func SaveMouseToProfile(dev *hid.Device) error {
+	fn, err := GetMouseProfileFunction(dev)
+	if err != nil {
+		return fmt.Errorf("read profile function: %w", err)
+	}
+	buttons, err := GetMouseButtons(dev)
+	if err != nil {
+		return fmt.Errorf("read buttons: %w", err)
+	}
+	profilePayload, err := mouseProfileFunctionPayload(fn)
+	if err != nil {
+		return err
+	}
+	typePayload := make([]byte, len(buttons))
+	keyPayload := make([]byte, len(buttons)*3)
+	for i, button := range buttons {
+		typePayload[i] = button.TypeDef
+		offset := i * 3
+		keyPayload[offset] = button.KeyType
+		keyPayload[offset+1] = button.KeyCode1
+		keyPayload[offset+2] = button.KeyCode2
+	}
+	if err := SendKBMSetAndAck(dev, SAVETOProfile, 0, profilePayload); err != nil {
+		return fmt.Errorf("save profile function: %w", err)
+	}
+	if err := SendKBMSetAndAck(dev, SAVETOProfile, 1, typePayload); err != nil {
+		return fmt.Errorf("save button types: %w", err)
+	}
+	if err := SendKBMSetAndAck(dev, SAVETOProfile, 2, keyPayload); err != nil {
+		return fmt.Errorf("save button assignments: %w", err)
+	}
+	return nil
+}
+
+func ResetMouseToDefault(dev *hid.Device) error {
+	return SendKBMSetAndAck(dev, RESETToDefault, 0, mouseResetToDefaultMagic)
 }

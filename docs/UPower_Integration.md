@@ -41,4 +41,4 @@ Expected result after loading the module:
 /sys/class/power_supply/inzone_battery_*
 ```
 
-UPower should then create a matching D-Bus object under `/org/freedesktop/UPower/devices/`.
+The kernel module reports these supplies with `Scope=Device`, and the udev rules set `UPOWER_BATTERY_TYPE` to headset / mouse / keyboard where applicable. This avoids presenting INZONE peripherals as internal/system batteries. UPower should then create a matching D-Bus object under `/org/freedesktop/UPower/devices/`.
