@@ -128,7 +128,16 @@ var infoCmd = &cobra.Command{
 			}
 		}
 
-		dev, err := usb.Open(d)
+		openInfo := d
+		if isProtocolA(d) {
+			control, err := usb.FindProtocolAInterface(d)
+			if err != nil {
+				return err
+			}
+			openInfo = control
+		}
+
+		dev, err := usb.Open(openInfo)
 		if err != nil {
 			return fmt.Errorf("%w\n\nHint: On Linux you usually need a udev rule for normal-user access.\nRun `inzone udev` to print the recommended rule, or try with sudo for testing.", err)
 		}
@@ -136,7 +145,7 @@ var infoCmd = &cobra.Command{
 		fmt.Println("\nDevice opened successfully. Querying...")
 
 		// Protocol A (mouse / keyboard) - UsagePage 0xFF00 / 0xFF90 / 0xFF04
-		if d.UsagePage == 0xFF00 || d.UsagePage == 0xFF90 || d.UsagePage == 0xFF04 {
+		if isProtocolA(openInfo) {
 			defer dev.Close()
 			raw, err := protocol.GetDeviceInformationKBM(dev)
 			if err != nil {

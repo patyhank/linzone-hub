@@ -458,6 +458,13 @@ func openDeviceByIndex(idx int) (*usb.Device, usb.DeviceInfo, error) {
 		return nil, usb.DeviceInfo{}, fmt.Errorf("device index %d out of range (have %d devices)", idx, len(devs))
 	}
 	d := devs[idx]
+	if isProtocolA(d) {
+		control, err := usb.FindProtocolAInterface(d)
+		if err != nil {
+			return nil, d, err
+		}
+		d = control
+	}
 	dev, err := usb.Open(d)
 	if err != nil {
 		return nil, d, fmt.Errorf("open device %d (%s): %w", idx, d.Model, err)

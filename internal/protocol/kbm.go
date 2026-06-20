@@ -354,7 +354,7 @@ func BuildKBMSet(cmd16 uint16, packet byte, data []byte) []byte {
 }
 
 // SendKBMSetAndAck sends a SET and waits for the ACK response.
-// Returns nil on 0xACDC (OK), error on NG or timeout or bad status.
+// Returns nil on OK ACK, error on NG or timeout or bad status.
 func SendKBMSetAndAck(dev *hid.Device, cmd16 uint16, packet byte, data []byte) error {
 	pkt := BuildKBMSet(cmd16, packet, data)
 	if err := SendKBMReport(dev, pkt); err != nil {
@@ -377,7 +377,7 @@ func SendKBMSetAndAck(dev *hid.Device, cmd16 uint16, packet byte, data []byte) e
 		return kbmStatusError(status, nil)
 	}
 	status := binary.LittleEndian.Uint16(payload[0:2])
-	if status != 0xACDC && status != 0xFAEC {
+	if !isKBMOKStatus(status) && status != 0xFAEC {
 		if fallback, ok := findKBMStatus(resp); ok {
 			status = fallback
 		}
@@ -388,7 +388,7 @@ func SendKBMSetAndAck(dev *hid.Device, cmd16 uint16, packet byte, data []byte) e
 func findKBMStatus(data []byte) (uint16, bool) {
 	for i := 0; i+1 < len(data); i++ {
 		status := binary.LittleEndian.Uint16(data[i : i+2])
-		if status == 0xACDC || status == 0xFAEC {
+		if isKBMOKStatus(status) || status == 0xFAEC {
 			return status, true
 		}
 	}
@@ -397,7 +397,7 @@ func findKBMStatus(data []byte) (uint16, bool) {
 
 func kbmStatusError(status uint16, payload []byte) error {
 	switch status {
-	case 0xACDC:
+	case 0xACDC, 0xACEC:
 		return nil
 	case 0xFAEC:
 		if len(payload) >= 3 {
@@ -407,6 +407,10 @@ func kbmStatusError(status uint16, payload []byte) error {
 	default:
 		return fmt.Errorf("unexpected SET ack status 0x%04X", status)
 	}
+}
+
+func isKBMOKStatus(status uint16) bool {
+	return status == 0xACDC || status == 0xACEC
 }
 
 // SetProfileNumber sets current profile (1-4). Command 0x0020.
